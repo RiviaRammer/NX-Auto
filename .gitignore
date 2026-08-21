@@ -1,0 +1,30 @@
+# ESP-IDF generated files
+**/build/
+**/managed_components/
+**/sdkconfig
+**/sdkconfig.old
+**/compile_commands.json
+
+# Local IDE and machine-specific settings
+**/.vscode/
+**/.idea/
+.DS_Store
+
+# Local credentials and environment files
+**/main/config.h
+**/.env
+**/.env.*
+!**/.env.example
+
+# Python environments and generated output
+**/.venv/
+**/__pycache__/
+**/*.py[cod]
+**/captures/
+
+# Downloaded/generated vision models; keep only their documentation
+/capture/pc/models/*
+!/capture/pc/models/README.md
+
+# Local research material is not part of the distributable project
+/参考项目/

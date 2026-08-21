@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Cardputer NS HID</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+    * { box-sizing: border-box; }
+    body { max-width: 760px; margin: 0 auto; padding: 22px; background: #101317; color: #eef2f6; }
+    h1 { font-size: 1.65rem; margin: 0 0 12px; }
+    h2 { font-size: 1.15rem; margin-top: 0; }
+    p { line-height: 1.55; color: #bdc7d3; }
+    small { color: #91a0af; }
+    .status { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+    .pill { padding: 6px 10px; border-radius: 999px; background: #3b2530; }
+    .ok { background: #173f31; color: #82efbd; }
+    .tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-bottom: 14px; }
+    .tab { background: #252d37; color: #bdc7d3; }
+    .tab.active { background: #3468c0; color: white; }
+    .panel { display: none; background: #1a2028; border: 1px solid #303a46; border-radius: 14px; padding: 20px; }
+    .panel.active { display: block; }
+    .connect-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-bottom: 18px; }
+    .connect-controls .pair { background: #3468c0; color: white; }
+    .connect-controls .confirm { background: #267d57; color: white; }
+    .controller { border-radius: 28px; padding: 16px; background: #141a21; border: 1px solid #303a46; }
+    .controller button { background: #303a46; color: #eef2f6; min-width: 48px; min-height: 44px; padding: 9px; }
+    .controller-top { display: grid; grid-template-columns: 1fr 1fr .7fr 1.1fr .7fr 1fr 1fr; gap: 8px; align-items: center; }
+    .controller-top .empty { min-height: 1px; }
+    .controller-body { display: grid; grid-template-columns: 1fr 1.05fr 1fr; gap: 18px; align-items: center; margin-top: 18px; }
+    .diamond { display: grid; grid-template: repeat(3, 54px) / repeat(3, 54px); justify-content: center; align-items: center; }
+    .diamond .top { grid-area: 1 / 2; }
+    .diamond .left { grid-area: 2 / 1; }
+    .diamond .right { grid-area: 2 / 3; }
+    .diamond .bottom { grid-area: 3 / 2; }
+    .round { border-radius: 50%; min-width: 48px !important; min-height: 48px !important; }
+    .face-x { background: #355b91 !important; }
+    .face-y { background: #3f7951 !important; }
+    .face-a { background: #8a3f49 !important; }
+    .face-b { background: #8d7737 !important; }
+    .controller-center { min-height: 150px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-content: end; }
+    .controller-center button { font-size: .78rem; }
+    @media (max-width: 580px) {
+      .controller { padding: 11px 7px; }
+      .controller-top { gap: 4px; }
+      .controller-top button { min-width: 0; padding: 7px 3px; font-size: .78rem; }
+      .controller-body { grid-template-columns: 1fr 70px 1fr; gap: 4px; }
+      .diamond { grid-template: repeat(3, 44px) / repeat(3, 44px); }
+      .controller-center { min-height: 128px; }
+    }
+    button { border: 0; border-radius: 10px; padding: 12px 17px; font-weight: 700; cursor: pointer; }
+    button:disabled, textarea:disabled, select:disabled { opacity: .45; cursor: not-allowed; }
+    textarea, select { width: 100%; border: 1px solid #465363; border-radius: 8px; padding: 10px; background: #11161c; color: white; }
+    textarea { min-height: 270px; resize: vertical; line-height: 1.55; font-family: ui-monospace, monospace; margin: 10px 0; }
+    select { margin-bottom: 4px; }
+    .run { background: #32d58b; color: #071b12; }
+    #stop { background: #ef5b68; color: white; margin-left: auto; }
+    #message { min-height: 1.5em; margin: 11px 2px 0; color: #ffd479; }
+  </style>
+</head>
+<body>
+  <h1>Cardputer NS HID</h1>
+
+  <div class="status">
+    <span id="ip" class="pill">IP 获取中</span>
+    <span id="usb" class="pill">USB 未连接</span>
+    <span id="macro" class="pill">输入空闲</span>
+    <span id="step" class="pill">步骤 0/0</span>
+    <button id="stop">紧急停止</button>
+  </div>
+
+  <nav class="tabs">
+    <button class="tab active" data-panel="keyboard-panel">虚拟键盘</button>
+    <button class="tab" data-panel="macro-panel">宏脚本</button>
+    <button class="tab" data-panel="manual-panel">手动脚本</button>
+  </nav>
+
+  <section id="keyboard-panel" class="panel active">
+    <h2>虚拟键盘</h2>
+    <p><small>NS 初次识别时先点“L + R”，短按结束后点“A 确认”。Cardputer 实体键支持 A/B/X/Y/L/R、方向和 Plus/Minus。</small></p>
+    <div class="connect-controls">
+      <button class="control-button pair" data-buttons="48" data-duration="300">L + R</button>
+      <button class="control-button confirm" data-buttons="4" data-duration="150">A 确认</button>
+    </div>
+    <div class="controller">
+      <div class="controller-top">
+        <button class="control-button" data-buttons="64">ZL</button>
+        <button class="control-button" data-buttons="16">L</button>
+        <button class="control-button" data-buttons="256">−</button>
+        <span class="empty"></span>
+        <button class="control-button" data-buttons="512">＋</button>
+        <button class="control-button" data-buttons="32">R</button>
+        <button class="control-button" data-buttons="128">ZR</button>
+      </div>
+      <div class="controller-body">
+        <div class="diamond" aria-label="十字键">
+          <button class="control-button top" data-buttons="0" data-dpad="0">↑</button>
+          <button class="control-button left" data-buttons="0" data-dpad="6">←</button>
+          <button class="control-button right" data-buttons="0" data-dpad="2">→</button>
+          <button class="control-button bottom" data-buttons="0" data-dpad="4">↓</button>
+        </div>
+        <div class="controller-center" aria-label="摇杆位置留空">
+          <button class="control-button" data-buttons="8192">截图</button>
+          <button class="control-button" data-buttons="4096">HOME</button>
+        </div>
+        <div class="diamond" aria-label="ABXY">
+          <button class="control-button round top face-x" data-buttons="8">X</button>
+          <button class="control-button round left face-y" data-buttons="1">Y</button>
+          <button class="control-button round right face-a" data-buttons="4">A</button>
+          <button class="control-button round bottom face-b" data-buttons="2">B</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="macro-panel" class="panel">
+    <h2>宏脚本</h2>
+    <select id="macro-preset">
+      <option value="windbomb">风弹（已验证）</option>
+      <option value="load">读档（已验证）</option>
+    </select>
+    <textarea id="macro-script" spellcheck="false"></textarea>
+    <p><small>选择预设会载入对应脚本。可直接修改后执行；未来可以继续向下拉框增加其他宏。</small></p>
+    <button id="macro-start" class="run">执行所选宏</button>
+  </section>
+
+  <section id="manual-panel" class="panel">
+    <h2>手动脚本</h2>
+    <textarea id="manual-script" spellcheck="false">A[100ms],
+null[100ms]</textarea>
+    <p><small>每项表示完整手柄状态，相邻项不会自动松键。支持 A/B/X/Y/L/R/ZL/ZR/PLUS/MINUS/HOME/CAPTURE、前/后、十字方向、左右摇杆和 null，最多 40 步。</small></p>
+    <button id="manual-start" class="run">执行手动脚本</button>
+  </section>
+
+  <p id="message"></p>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    const buttonBits = {
+      Y: 1, B: 2, A: 4, X: 8, L: 16, R: 32, ZL: 64, ZR: 128,
+      MINUS: 256, PLUS: 512, LSTICK: 1024, RSTICK: 2048,
+      HOME: 4096, CAPTURE: 8192
+    };
+    const dpadValues = {'上': 0, '右': 2, '下': 4, '左': 6};
+    const macroPresets = {
+      windbomb: {
+        type: 'state',
+        script: `ZL[200ms],
+ZL+前[200ms],
+ZL+前+X[100ms],
+null[50ms],
+L[100ms],
+null[50ms],
+ZR[100ms],
+null[50ms],
+上[100ms],
+上+右摇杆右[100ms],
+null[50ms],
+L[100ms],
+null[50ms],
+上[200ms],
+上+右摇杆左[200ms],
+null[50ms],
+L[200ms],
+null[2000ms],
+X[500ms],
+null[50ms],
+X[500ms],
+null[50ms],
+X[500ms],
+null[50ms],
+X[500ms],
+null[100ms]`
+      },
+      load: {
+        type: 'tap',
+        script: '+, R×3, 上×5, 下, A, A, 上, 上, 上, A'
+      }
+    };
+
+    function compileStateScript(text) {
+      const sourceSteps = text.split(/[\n,，]+/).map(s => s.trim()).filter(Boolean);
+      if (!sourceSteps.length) throw new Error('脚本为空');
+      if (sourceSteps.length > 40) throw new Error('脚本最多 40 步');
+      return sourceSteps.map((source, index) => {
+        let action = source;
+        let duration = 60;
+        const timed = source.match(/^(.*)\[\s*(\d+)\s*(?:ms)?\s*\]$/i);
+        if (timed) {
+          action = timed[1].trim();
+          duration = Number(timed[2]);
+        } else if (source.includes('[') || source.includes(']')) {
+          throw new Error(`第 ${index + 1} 步时间格式错误`);
+        }
+        if (duration < 15 || duration > 5000) throw new Error(`第 ${index + 1} 步时间必须是 15-5000ms`);
+        let buttons = 0, dpad = 15, lx = 128, ly = 128, rx = 128, ry = 128;
+        const actions = action.split('+').map(s => s.trim()).filter(Boolean);
+        if (!actions.length) throw new Error(`第 ${index + 1} 步没有动作`);
+        if (actions.length === 1 && ['NULL', '无'].includes(actions[0].toUpperCase())) {
+          return [duration, buttons, dpad, lx, ly, rx, ry].join(',');
+        }
+        for (const raw of actions) {
+          const token = raw.toUpperCase();
+          if (buttonBits[token] !== undefined) buttons |= buttonBits[token];
+          else if (dpadValues[raw] !== undefined) {
+            if (dpad !== 15) throw new Error(`第 ${index + 1} 步只能有一个十字键方向`);
+            dpad = dpadValues[raw];
+          } else if (raw === '前') ly = 0;
+          else if (raw === '后') ly = 255;
+          else if (raw === '左摇杆左') lx = 0;
+          else if (raw === '左摇杆右') lx = 255;
+          else if (raw === '右摇杆左') rx = 0;
+          else if (raw === '右摇杆右') rx = 255;
+          else throw new Error(`第 ${index + 1} 步不认识“${raw}”`);
+        }
+        return [duration, buttons, dpad, lx, ly, rx, ry].join(',');
+      }).join('\n');
+    }
+
+    function compileTapScript(text) {
+      const sourceActions = text.split(/[,，\n]+/).map(s => s.trim()).filter(Boolean);
+      const steps = [];
+      for (let index = 0; index < sourceActions.length; index++) {
+        const matched = sourceActions[index].match(/^(.*?)(?:\s*[×*]\s*(\d+))?$/);
+        const raw = matched[1].trim();
+        const count = matched[2] ? Number(matched[2]) : 1;
+        if (!raw || count < 1 || count > 10) throw new Error(`第 ${index + 1} 项格式错误`);
+        let buttons = 0, dpad = 15;
+        const token = raw.toUpperCase();
+        if (buttonBits[token] !== undefined) buttons = buttonBits[token];
+        else if (raw === '+') buttons = buttonBits.PLUS;
+        else if (raw === '-') buttons = buttonBits.MINUS;
+        else if (dpadValues[raw] !== undefined) dpad = dpadValues[raw];
+        else throw new Error(`不认识“${raw}”`);
+        for (let repeat = 0; repeat < count; repeat++) {
+          steps.push([100, buttons, dpad, 128, 128, 128, 128].join(','));
+          steps.push('100,0,15,128,128,128,128');
+        }
+      }
+      if (!steps.length) throw new Error('脚本为空');
+      if (steps.length > 40) throw new Error('展开后最多 40 步');
+      return steps.join('\n');
+    }
+
+    function setBusy(disabled) {
+      $('macro-start').disabled = disabled;
+      $('manual-start').disabled = disabled;
+      $('macro-preset').disabled = disabled;
+      $('macro-script').disabled = disabled;
+      $('manual-script').disabled = disabled;
+      document.querySelectorAll('.control-button').forEach(button => button.disabled = disabled);
+    }
+
+    async function runScript(compiled, label) {
+      setBusy(true);
+      const response = await fetch('/api/script', {
+        method: 'POST', headers: {'Content-Type': 'text/plain; charset=utf-8'}, body: compiled
+      });
+      if (!response.ok) throw new Error(await response.text());
+      $('message').textContent = `${label}已接收，请勿操作其他按键。`;
+      await refresh();
+    }
+
+    function loadPreset() {
+      $('macro-script').value = macroPresets[$('macro-preset').value].script;
+    }
+
+    async function refresh() {
+      try {
+        const s = await fetch('/api/status', {cache: 'no-store'}).then(r => r.json());
+        $('ip').textContent = 'IP ' + s.ip;
+        $('ip').className = 'pill ok';
+        if (s.usb_mounted && s.usb_suspended) $('usb').textContent = 'USB 已挂起';
+        else if (s.usb_mounted) $('usb').textContent = 'USB 已连接 NS';
+        else if (s.usb_connected) $('usb').textContent = 'USB 待 NS 枚举';
+        else $('usb').textContent = 'USB 未连接 / NS 休眠';
+        $('usb').className = 'pill' + (s.usb_mounted && !s.usb_suspended ? ' ok' : '');
+        $('macro').textContent = s.active ? '输入执行中' : '输入空闲';
+        $('macro').className = 'pill' + (s.active ? ' ok' : '');
+        $('step').textContent = `步骤 ${s.step}/${s.step_count}`;
+        setBusy(!s.usb_mounted || s.usb_suspended || s.active);
+        if (!s.active) {
+          $('macro-preset').disabled = false;
+          $('macro-script').disabled = false;
+          $('manual-script').disabled = false;
+        }
+      } catch (_) {
+        $('message').textContent = '无法连接 Cardputer NS HID';
+        setBusy(true);
+      }
+    }
+
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.onclick = () => {
+        document.querySelectorAll('.tab').forEach(item => item.classList.toggle('active', item === tab));
+        document.querySelectorAll('.panel').forEach(panel => panel.classList.toggle('active', panel.id === tab.dataset.panel));
+      };
+    });
+    $('macro-preset').onchange = loadPreset;
+    $('macro-start').onclick = async () => {
+      try {
+        const preset = macroPresets[$('macro-preset').value];
+        const compiled = preset.type === 'tap' ? compileTapScript($('macro-script').value) : compileStateScript($('macro-script').value);
+        await runScript(compiled, '宏脚本');
+      } catch (error) { $('message').textContent = '宏脚本失败：' + error.message; }
+    };
+    $('manual-start').onclick = async () => {
+      try { await runScript(compileStateScript($('manual-script').value), '手动脚本'); }
+      catch (error) { $('message').textContent = '手动脚本失败：' + error.message; }
+    };
+    document.querySelectorAll('.control-button').forEach(button => {
+      button.onclick = async () => {
+        setBusy(true);
+        const query = new URLSearchParams({
+          buttons: button.dataset.buttons, dpad: button.dataset.dpad || '15', duration: button.dataset.duration || '120'
+        });
+        try {
+          const response = await fetch('/api/tap?' + query, {method: 'POST'});
+          if (!response.ok) throw new Error(await response.text());
+          $('message').textContent = `已发送 ${button.textContent.trim()} 短按`;
+          await refresh();
+        } catch (error) { $('message').textContent = '按键失败：' + error.message; }
+      };
+    });
+    $('stop').onclick = async () => {
+      try {
+        await fetch('/api/stop', {method: 'POST'});
+        $('message').textContent = '已停止并释放自动输入。';
+        await refresh();
+      } catch (_) { $('message').textContent = '停止请求发送失败'; }
+    };
+    loadPreset();
+    refresh();
+    setInterval(refresh, 400);
+  </script>
+</body>
+</html>
