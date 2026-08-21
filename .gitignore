@@ -23,8 +23,8 @@
 **/captures/
 
 # Downloaded/generated vision models; keep only their documentation
-/capture/pc/models/*
-!/capture/pc/models/README.md
+/vision/pc/models/*
+!/vision/pc/models/README.md
 
 # Local research material is not part of the distributable project
 /参考项目/

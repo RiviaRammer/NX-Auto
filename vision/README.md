@@ -1,7 +1,9 @@
-# Nintendo Switch 图像采集
+# Nintendo Switch 视频流与计算机视觉
 
 NS 底座的 HDMI OUT 接入 USB 2.0 采集卡的 HDMI IN。采集卡的 USB 只能接一个
 Host：调试 PC 方案时接 PC，调试 Tab5 方案时接 Tab5 USB-A，不能同时连接。
+获取的 UVC 视频流可用于实时预览、截帧、录像、目标检测和跟踪，并作为
+NX-Auto 闭环自动化的视觉输入。
 
 ```text
 Nintendo Switch（插入底座） -> HDMI -> USB 2.0 UVC 采集卡 -> PC 或 Tab5
@@ -10,12 +12,12 @@ Nintendo Switch（插入底座） -> HDMI -> USB 2.0 UVC 采集卡 -> PC 或 Tab
 > Switch Lite 本身不能通过底座输出 HDMI。普通版/OLED 版需要给底座正常供电；
 > 系统设置中先固定为 720p，关闭“与电视电源状态同步”，可减少重新握手。
 
-## 1. 先在 PC 验证采集卡
+## 1. PC 视频流采集与视觉处理
 
 绝大多数免驱采集卡是 UVC 设备。先关闭 OBS、相机等可能独占设备的程序，然后：
 
 ```sh
-cd capture/pc
+cd vision/pc
 python -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
@@ -54,7 +56,7 @@ v4l2-ctl -d /dev/video2 --list-formats-ext
 确认 `/dev/video2` 可用后，在安装了 OpenCV、Ultralytics 的同一 Python 环境运行：
 
 ```sh
-cd capture/pc
+cd vision/pc
 source .venv/bin/activate
 python ns_person_track.py --source /dev/video2
 ```
@@ -68,8 +70,8 @@ python ns_person_track.py --source /dev/video2
 - `yolo11n.pt`：<https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11n.pt>
 - `yolo11s.pt`：<https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11s.pt>
 
-保存到 `capture/pc/models/`，例如完整路径为
-`capture/pc/models/yolo11s.pt`。随后显式指定 `--model models/yolo11s.pt`。
+保存到 `vision/pc/models/`，例如完整路径为
+`vision/pc/models/yolo11s.pt`。随后显式指定 `--model models/yolo11s.pt`。
 
 ```sh
 # NVIDIA GPU 0，并保存带框录像
@@ -90,20 +92,20 @@ python ns_person_track.py --source /dev/video2 \
 “林克 / NPC / 敌人 / Boss”，应从实际 NS 画面截帧、标注这些自定义类别，再训练
 YOLO 检测模型；不建议一开始就做人脸身份识别。
 
-## 2. Tab5 直接采集并显示
+## 2. Tab5 实时视频流采集与显示
 
 `tab5` 是独立 ESP-IDF 工程，不会改变仓库现有 Cardputer HID 固件。推荐
 ESP-IDF 5.5.x：
 
 ```sh
-cd capture/tab5
+cd vision/tab5
 idf.py set-target esp32p4
 idf.py build
 idf.py -p PORT flash monitor
 ```
 
 使用 VS Code ESP-IDF 插件时，建议通过 **File → Open Folder** 单独打开
-`capture/tab5`，避免与仓库中目标为 ESP32-S3 的 `usb_hid` 工程混用配置。随后依次执行：
+`vision/tab5`，避免与仓库中目标为 ESP32-S3 的 `usb_hid` 工程混用配置。随后依次执行：
 
 1. `ESP-IDF: Set Espressif Device Target` → `esp32p4`。
 2. `ESP-IDF: Select Port to Use` → Tab5 对应串口。
