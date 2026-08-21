@@ -12,7 +12,7 @@ PC 控制工具、视频流处理、计算机视觉和本地实时宏组合在�
 | [`bt_classic_hid/`](bt_classic_hid/) | 使用 Bluetooth Classic HID 模拟第一代 Switch 手柄 | 规划中 |
 | [`vision/`](vision/) | 在 PC 或 Tab5 上获取 UVC 视频流，并进行解码、检测、跟踪等视觉处理 | 实验中 |
 
-`vision` 负责视频输入和视觉感知，其输出可作为自动化决策的状态来源。
+`vision` 负责视频输入和视觉感知，其输出可作为自动化决策的状态来源。  
 Switch 2 的私有 BLE 控制器协议与第一代 Switch 的 Bluetooth Classic HID
 不兼容，后续会作为独立子项目接入。
 
@@ -22,15 +22,8 @@ USB HID 固件的构建、烧录和控制说明见 [`usb_hid/README.md`](usb_hid
 
 PC/Tab5 视频流处理与视觉实验说明见 [`vision/README.md`](vision/README.md)。
 
-## 仓库约定
-
-- ESP-IDF 组件由 Component Manager 根据 `idf_component.yml` 自动下载，不提交
-  `managed_components/`。
-- 提交 `dependencies.lock` 以保留已验证的组件版本。
-- `main/config.h`、`.env` 和 IDE 本机设置不提交；仓库仅保留无敏感信息的配置示例。
-- 模型权重、视频、截图、构建产物和 `参考项目/` 不提交到 GitHub。
 
 ## 免责声明
 
-NX-Auto 是独立社区项目，与 Nintendo 无关。请仅在自己拥有或获得授权的设备上用于
+NX-Auto 是独立项目，与 Nintendo 无关。请仅在自己拥有或获得授权的设备上用于
 学习、测试和互操作研究。
